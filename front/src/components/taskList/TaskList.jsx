@@ -2,28 +2,25 @@ import Task from './Task';
 import axios from 'axios';
 
 const TaskList = ({ data }) => {
-  const SERVER_CONFIG_URL =
-    process.env.REACT_APP_SERVER_CONFIG_URL || 'http://localhost:3011/config';
-
-  const getUrl = async () => {
-    let url = '';
-
-    await axios.get(SERVER_CONFIG_URL).then((res) => {
-      url = res.data.url;
-      return url;
-    });
-    return url;
-  };
-  const url = getUrl();
-
-  const { todos, setTodos, setUpdatingTodos, showDatePicker, showTimePicker } =
-    data;
+  const { 
+    url, // Usamos la URL que viene desde App.js
+    todos, 
+    setTodos, 
+    setUpdatingTodos, 
+    showDatePicker, 
+    showTimePicker 
+  } = data;
 
   const maxlength = 22;
 
   const removeTodo = (id) => {
-    axios.delete(`${url.SERVER_BACK_URL}/todos/${id}`);
-    setUpdatingTodos(true);
+    if (!url || !url.SERVER_BACK_URL) return;
+    
+    axios.delete(`${url.SERVER_BACK_URL}/todos/${id}`)
+      .then(() => {
+        setUpdatingTodos(true);
+      })
+      .catch(err => console.error("Error al eliminar tarea:", err));
   };
 
   const splitSentence = (sentence) => {
@@ -62,7 +59,9 @@ const TaskList = ({ data }) => {
         >
           {todos.map((todo, index) => (
             <Task
+              key={todo._id || index}
               data={{
+                url, // También pasamos la url a cada Task individual
                 todo,
                 setTodos,
                 setUpdatingTodos,
