@@ -60,8 +60,8 @@ services:
   back:
     image: ${BACK_IMAGE}
     build:
-      context: ./back
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./back/Dockerfile
       args:
         NODE_BASE_IMAGE: ${NODE_BASE_IMAGE}
     container_name: ${BACK_CONTAINER_NAME}
@@ -74,11 +74,14 @@ services:
       SERVER_CONFIG_URL: ${SERVER_CONFIG_URL_DOCKER}
     ports:
       - '${PORT_SERVER}:${PORT_SERVER}'
+      - '3443:3443'
     depends_on:
       db:
         condition: service_started
       config:
         condition: service_started
+    volumes:
+      - ./certs:/usr/src/app/back/certs:ro
 
   front:
     image: ${FRONT_IMAGE}

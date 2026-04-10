@@ -1,21 +1,8 @@
 import axios from 'axios';
 
 const Task = ({ data }) => {
-  const SERVER_CONFIG_URL =
-    process.env.REACT_APP_SERVER_CONFIG_URL || 'http://localhost:3011/config';
-
-  const getUrl = async () => {
-    let url = '';
-
-    await axios.get(SERVER_CONFIG_URL).then((res) => {
-      url = res.data.url;
-      return url;
-    });
-    return url;
-  };
-  const url = getUrl();
-
   const {
+    url, // Recibimos la URL desde el padre
     todo,
     setTodos,
     setUpdatingTodos,
@@ -62,24 +49,31 @@ const Task = ({ data }) => {
             }}
             checked={todo.completed}
             onChange={(e) => {
+              if (!url || !url.SERVER_BACK_URL) return;
+
+              const nextStatus = !todo.completed;
+              
               setTodos(
                 todos.map((item, i) => {
                   if (i === index) {
                     return {
                       ...item,
-                      completed: !item.completed,
+                      completed: nextStatus,
                     };
                   }
                   return item;
                 }),
               );
 
+              // Actualizar en el servidor
               axios.put(`${url.SERVER_BACK_URL}/todos/${todo._id}`, {
                 ...todo,
-                completed: !todo.completed,
-              });
-
-              setUpdatingTodos(true);
+                completed: nextStatus,
+              })
+              .then(() => {
+                setUpdatingTodos(true);
+              })
+              .catch(err => console.error("Error al actualizar tarea:", err));
             }}
           />
 

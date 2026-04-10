@@ -17,7 +17,7 @@ const config = {
 };
 
 const url = {
-  SERVER_BACK_URL: `${config.PROTOCOL}://${config.IP_SERVER}:${config.PORT_SERVER}`,
+  SERVER_BACK_URL: `http://${config.IP_SERVER}:${config.PORT_SERVER}`,
   SERVER_DB_URL: `${config.PROTOCOL}://${config.IP_DB}:${config.PORT_DB}`,
   SERVER_FRONT_URL: `${config.PROTOCOL}://${config.IP_FRONT}:${config.PORT_FRONT}`,
 };

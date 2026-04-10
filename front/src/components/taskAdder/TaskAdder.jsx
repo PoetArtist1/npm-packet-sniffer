@@ -6,23 +6,8 @@ import dayjs from 'dayjs';
 import axios from 'axios';
 
 const TaskAdder = ({ data }) => {
-  const SERVER_CONFIG_URL =
-    process.env.REACT_APP_SERVER_CONFIG_URL || 'http://localhost:3011/config';
-
-  const getUrl = async () => {
-    let url = '';
-
-    await axios.get(SERVER_CONFIG_URL).then((res) => {
-      url = res.data.url;
-      return url;
-    });
-    return url;
-  };
-  const url = getUrl();
-
-  (async () => console.log('url', await getUrl()))();
-
   const {
+    url, // Usamos la URL que viene desde el componente App padre
     setUpdatingTodos,
     input,
     setInput,
@@ -36,6 +21,11 @@ const TaskAdder = ({ data }) => {
   const [limitTime, setLimitTime] = useState({});
 
   const addTodo = () => {
+    if (!url || !url.SERVER_BACK_URL) {
+      console.error("La URL del servidor no está disponible aún.");
+      return;
+    }
+
     const date = dayjs();
 
     const thisLimitDate =
@@ -63,24 +53,28 @@ const TaskAdder = ({ data }) => {
     };
 
     const newTodo = {
-      //Use id from MongoDB
       description: input,
       limitDate: {
         ...fullDate,
       },
-      //Por los momentos funcionan como state, pero en el futuro se puede cambiar a un estado de "set", "delayed" o "completed"
       completed: false,
       delayed: false,
     };
 
-    axios.post(`${url.SERVER_BACK_URL}/todos`, newTodo);
-
-    if (input.trim()) {
-      setUpdatingTodos(true);
-      setInput('');
-    }
-    setLimitDate({});
-    setLimitTime({});
+    // Realizamos el POST a la URL correcta
+    axios.post(`${url.SERVER_BACK_URL}/todos`, newTodo)
+      .then(() => {
+        if (input.trim()) {
+          setUpdatingTodos(true);
+          setInput('');
+        }
+        setLimitDate({});
+        setLimitTime({});
+      })
+      .catch(error => {
+        console.error("Error al añadir tarea:", error);
+        alert("Error al conectar con el servidor. Verifica que el backend esté corriendo.");
+      });
   };
 
   return (

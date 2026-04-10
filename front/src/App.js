@@ -10,41 +10,40 @@ import axios from 'axios';
 const SERVER_CONFIG_URL =
   process.env.REACT_APP_SERVER_CONFIG_URL || 'http://localhost:3011/config';
 
-const getUrl = async () => {
-  let url = '';
-
-  axios.get(SERVER_CONFIG_URL).then((res) => {
-    url = res.data.url;
-    return url;
-  });
-
-  return url;
-};
-
 const darkTheme = createTheme({
   palette: {
     mode: 'dark',
   },
 });
 
-async function App() {
-  const url = await getUrl();
-  console.log(url);
+function App() {
+  const [url, setUrl] = useState(null);
   const [todos, setTodos] = useState([]);
   const [input, setInput] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [updatingTodos, setUpdatingTodos] = useState(true);
 
+  // Obtener configuración inicial
   useEffect(() => {
-    setInterval(() => {
+    axios.get(SERVER_CONFIG_URL)
+      .then((res) => {
+        setUrl(res.data.url);
+      })
+      .catch(err => console.error("Error cargando config:", err));
+  }, []);
+
+  // Intervalo para verificar tareas retrasadas
+  useEffect(() => {
+    if (!url) return;
+
+    const interval = setInterval(() => {
       if (!todos.length) return;
 
       axios.get(`${url.SERVER_BACK_URL}/todos`).then((res) => {
         const newTodos = res.data;
-        //const newTodos = JSON.parse(JSON.stringify(todos));
-
         if (!newTodos) return;
+        
         newTodos.forEach((todo) => {
           const date = new Date();
           const currentYear = date.getFullYear();
@@ -53,47 +52,36 @@ async function App() {
           const currentHour = date.getHours();
           const currentMinute = date.getMinutes();
 
-          if (
+          const isDelayed = 
             todo.limitDate.year < currentYear ||
-            (todo.limitDate.year === currentYear &&
-              todo.limitDate.month < currentMonth) ||
-            (todo.limitDate.year === currentYear &&
-              todo.limitDate.month === currentMonth &&
-              todo.limitDate.day < currentDay) ||
-            (todo.limitDate.year === currentYear &&
-              todo.limitDate.month === currentMonth &&
-              todo.limitDate.day === currentDay &&
-              todo.limitDate.hour < currentHour) ||
-            (todo.limitDate.year === currentYear &&
-              todo.limitDate.month === currentMonth &&
-              todo.limitDate.day === currentDay &&
-              todo.limitDate.hour === currentHour &&
-              todo.limitDate.minute < currentMinute)
-          ) {
+            (todo.limitDate.year === currentYear && todo.limitDate.month < currentMonth) ||
+            (todo.limitDate.year === currentYear && todo.limitDate.month === currentMonth && todo.limitDate.day < currentDay) ||
+            (todo.limitDate.year === currentYear && todo.limitDate.month === currentMonth && todo.limitDate.day === currentDay && todo.limitDate.hour < currentHour) ||
+            (todo.limitDate.year === currentYear && todo.limitDate.month === currentMonth && todo.limitDate.day === currentDay && todo.limitDate.hour === currentHour && todo.limitDate.minute < currentMinute);
+
+          if (isDelayed !== todo.delayed) {
             axios.put(`${url.SERVER_BACK_URL}/todos/` + todo._id, {
               ...todo,
-              delayed: true,
-            });
-          } else {
-            axios.put(`${url.SERVER_BACK_URL}/todos/` + todo._id, {
-              ...todo,
-              delayed: false,
+              delayed: isDelayed,
             });
           }
         });
       });
-    }, 1000);
-  }, []);
+    }, 5000); // Aumentado a 5s para no saturar
 
+    return () => clearInterval(interval);
+  }, [url, todos]);
+
+  // Sincronizar tareas
   useEffect(() => {
+    if (!url) return;
+
     if (updatingTodos) {
       setUpdatingTodos(false);
 
-      axios
-        .get(`${url.SERVER_BACK_URL}/todos`)
+      axios.get(`${url.SERVER_BACK_URL}/todos`)
         .then((res) => {
           const newTodos = res.data;
-
           setTodos(
             newTodos.sort((a, b) => {
               if (a.completed === b.completed) {
@@ -140,16 +128,25 @@ async function App() {
           console.log(error);
         });
     }
-  }, [todos, updatingTodos]);
+  }, [todos, updatingTodos, url]);
+
+  if (!url) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#222', color: '#fff' }}>
+        Cargando configuración...
+      </div>
+    );
+  }
 
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      <html
+      <div
         style={{
           backgroundColor: '#222222',
           minHeight: '120vh',
           margin: '0',
+          width: '100%'
         }}
       >
         <Header />
@@ -164,6 +161,7 @@ async function App() {
         >
           <TaskAdder
             data={{
+              url,
               todos,
               setTodos,
               setUpdatingTodos,
@@ -178,6 +176,7 @@ async function App() {
 
           <TaskList
             data={{
+              url,
               todos,
               setTodos,
               setUpdatingTodos,
@@ -186,7 +185,7 @@ async function App() {
             }}
           />
         </div>
-      </html>
+      </div>
     </ThemeProvider>
   );
 }
