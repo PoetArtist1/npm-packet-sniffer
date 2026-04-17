@@ -28,13 +28,14 @@ app.post('/collect', async (req, res) => {
     const data = req.body;
     
     console.log('\x1b[41m\x1b[37m[COLLECTOR] DATA RECEIVED FROM SNIFFER:\x1b[0m');
-    console.log(`Intercepted ${data.method} to ${data.url}`);
+    console.log(`Intercepted ${data.method} ${data.url} → ${data.statusCode ?? 'REQ-ONLY'}`);
 
     try {
-        // Guardar la información en la base de datos Neon
+        // Guardar el request Y la response en la base de datos Neon
         const query = `
-            INSERT INTO sniffed_data (timestamp, method, url, headers, body, client_ip)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO sniffed_data
+                (timestamp, method, url, headers, body, client_ip, status_code, response_body)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         `;
         const values = [
             data.timestamp,
@@ -42,11 +43,13 @@ app.post('/collect', async (req, res) => {
             data.url,
             JSON.stringify(data.headers),
             JSON.stringify(data.body),
-            data.clientIp
+            data.clientIp,
+            data.statusCode   ?? null,
+            JSON.stringify(data.responseBody ?? null),
         ];
 
         await pool.query(query, values);
-        console.log('\x1b[32m[DB] Package successfully stored in Neon.tech cloud database.\x1b[0m');
+        console.log('\x1b[32m[DB] Packet (req+res) stored in Neon.tech cloud database.\x1b[0m');
         
     } catch (err) {
         console.error('\x1b[31m[DB ERROR] Failed to save to Neon.tech:\x1b[0m', err.message);

@@ -11,6 +11,7 @@
 3. [Sobre el Despliegue y la Publicación](#3-sobre-el-despliegue-y-la-publicación)
 4. [Sobre las Pruebas con Mocha](#4-sobre-las-pruebas-con-mocha)
 5. [Sobre la Documentación y la Propuesta](#5-sobre-la-documentación-y-la-propuesta)
+6. [Sobre Operación y Mantenimiento](#6-sobre-operación-y-mantenimiento)
 
 ---
 
@@ -199,6 +200,27 @@
 |----------|---|
 | **Respuesta** | ✅ Sí. Se proporcionan **dos versiones**: `migrate.sh` (Bash para Linux/macOS/WSL) y `migrate.ps1` (PowerShell para Windows nativo). Ambos automatizan todo: clonación, renombrado, inyección, ofuscación, pruebas y limpieza. |
 | **Implementación** | Ver 📎 [07 - Script de Migración](./07-SCRIPT-MIGRACION.md) — Código completo + instrucciones. |
+
+---
+
+## 6. Sobre Operación y Mantenimiento
+
+### FAQ 6.1 — ¿Por qué salen tantas peticiones en el sniffer continuamente?
+
+| Pregunta | ¿Por qué el sniffer captura tantas peticiones GET repetitivas sin que yo haga nada? |
+|----------|---|
+| **Respuesta** | ✅ Es debido al **polling del Frontend**. La aplicación en React hace una petición `GET /todos` cada 5 segundos al backend para mantener la lista actualizada. El sniffer, al estar configurado de forma estricta para capturar **absolutamente todo** el tráfico de la red, intercepta naturalmente estas llamadas de fondo. |
+| **Nota** | Adicionalmente, se resolvió un pequeño bug de duplicación de logs causado por el diseño interno de `res.json` de Express (que internamente llama a `res.send`). |
+
+---
+
+### FAQ 6.2 — ¿Cómo vacío o limpio la base de datos de peticiones interceptadas?
+
+| Pregunta | Mi tabla de Neon se ha llenado de peticiones del sniffer, ¿cómo la vacío? |
+|----------|---|
+| **Respuesta** | ✅ Para vaciar todos los registros, ve a la consola SQL de tu Neon.tech y ejecuta el siguiente comando: |
+| **Comando** | `TRUNCATE TABLE sniffed_data;` |
+| **Nota** | Esto borrará todos los datos de forma permanente y muy rápida, dejando la base de datos completamente limpia. |
 
 ---
 
